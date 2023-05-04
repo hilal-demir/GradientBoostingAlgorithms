@@ -27,7 +27,6 @@ data["label"] = data["label"].map(target_map)
 features = data["ileti"]
 target = data["label"]
 
-#git config --global user.email "you@example.com" git config --global user.name "Your Name"
 
 # Split the data into training and testing sets
 train_features, test_features, train_target, test_target = train_test_split(features, target, test_size=0.2, random_state=42)
