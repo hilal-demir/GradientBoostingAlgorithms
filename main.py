@@ -9,11 +9,13 @@ import sklearn.metrics
 
 from xgboost import plot_tree
 from lightgbm import plot_tree as lgbm_tree
+from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.ensemble import VotingClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 
 # Load the data from the Excel file
@@ -74,7 +76,7 @@ def xgb_boost():
     plt.show()
 
     # Confusion matrix
-    conf_matrix(preds)
+    #conf_matrix(preds)
 
 # LightGBM Model
 def lightgbm():
@@ -169,6 +171,40 @@ def ensemble():
     # Confusion matrix
     conf_matrix(y_pred)
 
+# SVM Model
+def svm():
+    global train_features, test_features
+
+    clf = SVC(kernel='poly', degree=3, gamma=0.05)
+    clf.fit(train_features, train_target)
+    prediction = clf.predict(test_features)
+
+    # Calculate accuracy score and f1 score
+    accuracy = accuracy_score(test_target, prediction)
+    print("Accuracy:", accuracy)
+    f1 = sklearn.metrics.f1_score(test_target, prediction, average='micro')
+    print("f1:", f1)
+
+    # Confusion matrix
+    conf_matrix(prediction)
+
+    # RF Model
+def rf():
+    global train_features, test_features
+
+    classifier = RandomForestClassifier(max_depth = 3, criterion = 'entropy', random_state = 42)
+
+    classifier.fit(train_features, train_target)
+    prediction = classifier.predict(test_features)
+
+    # Calculate accuracy score and f1 score
+    accuracy = accuracy_score(test_target, prediction)
+    print("Accuracy:", accuracy)
+    f1 = sklearn.metrics.f1_score(test_target, prediction, average='micro')
+    print("f1:", f1)
+
+    # Confusion matrix
+    conf_matrix(prediction)
 
 #ensemble()
 
@@ -177,3 +213,7 @@ def ensemble():
 #lightgbm()
 
 #xgb_boost()
+
+#svm()
+
+#rf()
