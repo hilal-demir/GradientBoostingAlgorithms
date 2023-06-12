@@ -13,6 +13,7 @@ from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.ensemble import VotingClassifier
 from sklearn.ensemble import RandomForestClassifier
@@ -78,6 +79,54 @@ def xgb_boost():
     # Confusion matrix
     #conf_matrix(preds)
 
+# XGBoost Model with cross-validation
+def xgb_boost_k_fold():
+    global features, target
+
+    params = {"objective": "multi:softmax", "num_class": 3, "num_leaves": 3, "learning_rate": 0.05}
+
+    # Perform 10-fold cross-validation
+    cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
+    a_scores = []
+    f_scores = []
+    for train_idx, test_idx in cv.split(features, target):
+        train_features, test_features = features[train_idx], features[test_idx]
+        train_target, test_target = target[train_idx], target[test_idx]
+
+        # Transform documents to document-term matrix
+        vectorizer = TfidfVectorizer()
+        train_features = vectorizer.fit_transform(train_features)
+        test_features = vectorizer.transform(test_features)
+
+
+        dtrain = xgb.DMatrix(train_features, label=train_target)
+
+        model = xgb.train(params, dtrain)
+
+        # Predict the labels for the test data and calculate the accuracy
+        dtest = xgb.DMatrix(test_features)
+        preds = model.predict(dtest)
+
+        # Calculate accuracy score and f1 score
+        accuracy = accuracy_score(test_target, preds)
+        print("Accuracy: %.2f%%" % (accuracy))
+        a_scores.append(accuracy)
+        f1 = sklearn.metrics.f1_score(test_target, preds, average='micro')
+        print("f1:", f1)
+        f_scores.append(f1)
+
+    # Print the cross-validation scores
+    a_scores = np.array(a_scores)
+    print("Accuracy Cross-validation scores:", a_scores)
+    print("Average accuracy: %.2f%%" % (a_scores.mean() * 100))
+    print("Standard deviation: %.2f%%" % (a_scores.std() * 100))
+
+    # Print the cross-validation scores
+    f_scores = np.array(f_scores)
+    print("f1 Cross-validation scores:", f_scores)
+    print("Average accuracy: %.2f%%" % (f_scores.mean() * 100))
+    print("Standard deviation: %.2f%%" % (f_scores.std() * 100))
+
 # LightGBM Model
 def lightgbm():
     global train_features, test_features
@@ -118,6 +167,66 @@ def lightgbm():
     # Confusion matrix
     conf_matrix(y_pred)
 
+# LightGBM Model with cross-validation
+def lightgbm_k_fold():
+    global features, target
+
+    # Set the hyperparameters for the LightGBM model
+    params = {
+        "objective": "multiclass",
+        "metric": "multi_logloss",
+        "num_classes": 3,
+        "num_leaves": 3,
+        "learning_rate": 0.05
+    }
+
+    # Perform 10-fold cross-validation
+    cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
+    a_scores = []
+    f_scores = []
+    for train_idx, test_idx in cv.split(features, target):
+        train_features, test_features = features[train_idx], features[test_idx]
+        train_target, test_target = target[train_idx], target[test_idx]
+
+        # Transform documents to document-term matrix
+        vectorizer = TfidfVectorizer()
+        train_features = vectorizer.fit_transform(train_features)
+        test_features = vectorizer.transform(test_features)
+
+        # Define the training dataset
+        train_data = lgb.Dataset(train_features, label=train_target)
+
+        # Train the LightGBM model
+        model = lgb.train(params, train_data, num_boost_round=100)
+
+        # Use the model to make predictions on the testing data
+        preds = model.predict(test_features)
+
+        # Convert predictions from one-hot encoding to class indices
+        preds = np.argmax(preds, axis=1)
+
+        # Calculate accuracy score and f1 score
+        accuracy = accuracy_score(test_target, preds)
+        print("Accuracy: %.2f%%" % (accuracy))
+        a_scores.append(accuracy)
+        f1 = sklearn.metrics.f1_score(test_target, preds, average='micro')
+        print("f1:", f1)
+        f_scores.append(f1)
+
+    # Print the cross-validation scores
+    a_scores = np.array(a_scores)
+    print("Accuracy Cross-validation scores:", a_scores)
+    print("Average accuracy: %.2f%%" % (a_scores.mean() * 100))
+    print("Standard deviation: %.2f%%" % (a_scores.std() * 100))
+
+    # Print the cross-validation scores
+    f_scores = np.array(f_scores)
+    print("f1 Cross-validation scores:", f_scores)
+    print("Average accuracy: %.2f%%" % (f_scores.mean() * 100))
+    print("Standard deviation: %.2f%%" % (f_scores.std() * 100))
+
+
+
 # CatBoost Model
 def catboost():
     global train_features, test_features
@@ -145,6 +254,53 @@ def catboost():
     # Confusion matrix
     conf_matrix(predicted_y)
 
+# CatBoost Model with cross-validation
+def catboost_k_fold():
+    global features, target
+
+    # Perform 10-fold cross-validation
+    cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
+    a_scores = []
+    f_scores = []
+    for train_idx, test_idx in cv.split(features, target):
+        train_features, test_features = features[train_idx], features[test_idx]
+        train_target, test_target = target[train_idx], target[test_idx]
+
+        # Transform documents to document-term matrix
+        vectorizer = TfidfVectorizer()
+        train_features = vectorizer.fit_transform(train_features)
+        test_features = vectorizer.transform(test_features)
+
+        # Define the CatBoost model and train it on the training data
+        pool = ctb.Pool(train_features, train_target)
+        cf = ctb.CatBoostClassifier(iterations=10, learning_rate=0.05, depth=3, loss_function='MultiClass',
+                                    verbose=False)
+        model_CBC = cf.fit(pool)
+
+        # Use the model to make predictions on the testing data
+        preds = model_CBC.predict(test_features)
+
+        # Calculate accuracy score and f1 score
+        accuracy = accuracy_score(test_target, preds)
+        print("Accuracy: %.2f%%" % (accuracy))
+        a_scores.append(accuracy)
+        f1 = sklearn.metrics.f1_score(test_target, preds, average='micro')
+        print("f1:", f1)
+        f_scores.append(f1)
+
+    # Print the cross-validation scores
+    a_scores = np.array(a_scores)
+    print("Accuracy Cross-validation scores:", a_scores)
+    print("Average accuracy: %.2f%%" % (a_scores.mean() * 100))
+    print("Standard deviation: %.2f%%" % (a_scores.std() * 100))
+
+    # Print the cross-validation scores
+    f_scores = np.array(f_scores)
+    print("f1 Cross-validation scores:", f_scores)
+    print("Average accuracy: %.2f%%" % (f_scores.mean() * 100))
+    print("Standard deviation: %.2f%%" % (f_scores.std() * 100))
+
+
 # Ensemble Classification Model
 def ensemble():
     global train_features, test_features
@@ -170,6 +326,59 @@ def ensemble():
 
     # Confusion matrix
     conf_matrix(y_pred)
+
+# Ensemble Model with cross-validation
+def ensemble_k_fold():
+    global features, target
+
+    # CatBoost Model
+    gb1 = ctb.CatBoostClassifier(verbose=False)
+    # LightGBM Model
+    gb2 = lgb.LGBMClassifier()
+    # XGBoost Model
+    gb3 = xgb.XGBClassifier()
+
+    # Soft voting classification
+    egb = VotingClassifier(estimators=[('xb', gb3), ('lb', gb2)], voting='soft')
+
+    # Perform 10-fold cross-validation
+    cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
+    a_scores = []
+    f_scores = []
+    for train_idx, test_idx in cv.split(features, target):
+        train_features, test_features = features[train_idx], features[test_idx]
+        train_target, test_target = target[train_idx], target[test_idx]
+
+        # Transform documents to document-term matrix
+        vectorizer = TfidfVectorizer()
+        train_features = vectorizer.fit_transform(train_features)
+        test_features = vectorizer.transform(test_features)
+
+        # Use the selected model to make predictions on the testing data
+        egb.fit(train_features, train_target)
+        preds = egb.predict(test_features)
+
+        # Calculate accuracy score and f1 score
+        accuracy = accuracy_score(test_target, preds)
+        print("Accuracy: %.2f%%" % (accuracy))
+        a_scores.append(accuracy)
+        f1 = sklearn.metrics.f1_score(test_target, preds, average='micro')
+        print("f1:", f1)
+        f_scores.append(f1)
+
+    # Print the cross-validation scores
+    a_scores = np.array(a_scores)
+    print("Accuracy Cross-validation scores:", a_scores)
+    print("Average accuracy: %.2f%%" % (a_scores.mean() * 100))
+    print("Standard deviation: %.2f%%" % (a_scores.std() * 100))
+
+    # Print the cross-validation scores
+    f_scores = np.array(f_scores)
+    print("f1 Cross-validation scores:", f_scores)
+    print("Average accuracy: %.2f%%" % (f_scores.mean() * 100))
+    print("Standard deviation: %.2f%%" % (f_scores.std() * 100))
+
+ensemble_k_fold()
 
 # SVM Model
 def svm():

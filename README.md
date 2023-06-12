@@ -13,7 +13,7 @@ graphiz, plotly, pydot --> for visualisation
 
 ### Description
 Multiclass XGBoost, LightGBM and CatBoost gradient boosting algorithms implemented in this project with
-their accuracy score, F1 score, plot tree and confusion matrix.
+their accuracy score, F1 score, plot tree and confusion matrix. Also 10-Fold Cross Validation is used on the models.
 
 
 ##### Project Structure
